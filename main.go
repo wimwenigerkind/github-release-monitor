@@ -106,10 +106,7 @@ func checkRepository(ctx context.Context, repo *Repository, client *github.Clien
 		return fmt.Errorf("error fetching release for %s: %w", repo.Slug, err)
 	}
 
-	if repo.CurrentReleaseTag != tagName {
-		repo.CurrentReleaseTag = tagName
-		fmt.Printf("New release for %s: %s\n", repo.Slug, tagName)
-	}
+	updateReleaseTag(repo, tagName)
 
 	return nil
 }
@@ -120,4 +117,11 @@ func getLatestReleaseTag(ctx context.Context, client *github.Client, owner, repo
 		return "", err
 	}
 	return release.GetTagName(), nil
+}
+
+func updateReleaseTag(repo *Repository, tagName string) {
+	if repo.CurrentReleaseTag != tagName {
+		repo.CurrentReleaseTag = tagName
+		fmt.Printf("New release for %s: %s\n", repo.Slug, tagName)
+	}
 }
