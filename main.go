@@ -32,26 +32,9 @@ func main() {
 
 	client := createGithubClient(ctx, *config)
 
-	for i := range config.Repositories {
-		repo := &config.Repositories[i]
-
-		owner, repoName, err := parseSlug(repo.Slug)
-		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
-			continue
-		}
-
-		release, _, err := client.Repositories.GetLatestRelease(ctx, owner, repoName)
-		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Error fetching release for %s: %v\n", repo.Slug, err)
-			continue
-		}
-
-		tagName := release.GetTagName()
-		if repo.CurrentReleaseTag != tagName {
-			repo.CurrentReleaseTag = tagName
-			fmt.Printf("New release for %s: %s\n", repo.Slug, tagName)
-		}
+	err = checkRepositories(ctx, config, client)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Error checking repositories: %v\n", err)
 	}
 
 	err = saveConfig("config.yml", config)
@@ -99,4 +82,29 @@ func parseSlug(slug string) (owner string, repo string, err error) {
 		return "", "", fmt.Errorf("invalid slug format: %s", slug)
 	}
 	return parts[0], parts[1], nil
+}
+
+func checkRepositories(ctx context.Context, config *Config, client *github.Client) error {
+	for i := range config.Repositories {
+		repo := &config.Repositories[i]
+
+		owner, repoName, err := parseSlug(repo.Slug)
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
+			continue
+		}
+
+		release, _, err := client.Repositories.GetLatestRelease(ctx, owner, repoName)
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Error fetching release for %s: %v\n", repo.Slug, err)
+			continue
+		}
+
+		tagName := release.GetTagName()
+		if repo.CurrentReleaseTag != tagName {
+			repo.CurrentReleaseTag = tagName
+			fmt.Printf("New release for %s: %s\n", repo.Slug, tagName)
+		}
+	}
+	return nil
 }
