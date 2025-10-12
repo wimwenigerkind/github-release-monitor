@@ -22,16 +22,12 @@ type Repository struct {
 }
 
 func main() {
-	configData, err := os.ReadFile("config.yml")
+	config, err := loadConfig("config.yml")
 	if err != nil {
-		configData = []byte{}
-	}
-
-	var config Config
-	err = yaml.Unmarshal(configData, &config)
-	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
 		return
 	}
+
 	ctx := context.Background()
 	var client *github.Client
 	if config.AccessToken != "" {
@@ -74,4 +70,17 @@ func main() {
 		_, _ = fmt.Fprintf(os.Stderr, "Error writing config: %v\n", err)
 		return
 	}
+}
+
+func loadConfig(filename string) (*Config, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	var config Config
+	err = yaml.Unmarshal(data, &config)
+	if err != nil {
+		return nil, err
+	}
+	return &config, nil
 }
