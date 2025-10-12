@@ -122,6 +122,10 @@ func getLatestReleaseTag(ctx context.Context, client *github.Client, owner, repo
 func updateReleaseTag(repo *Repository, tagName string) {
 	if repo.CurrentReleaseTag != tagName {
 		repo.CurrentReleaseTag = tagName
-		fmt.Printf("New release for %s: %s\n", repo.Slug, tagName)
+		notifyNewRelease(repo.Slug, tagName)
 	}
+}
+
+func notifyNewRelease(slug, tagName string) {
+	fmt.Printf("New release for %s: %s\n", slug, tagName)
 }
