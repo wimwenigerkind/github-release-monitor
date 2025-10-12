@@ -33,13 +33,13 @@ func main() {
 
 	for i := range config.Repositorys {
 		repo := &config.Repositorys[i]
-		parts := strings.SplitN(repo.Slug, "/", 2)
-		if len(parts) != 2 {
-			_, _ = fmt.Fprintf(os.Stderr, "Invalid slug format: %s\n", repo.Slug)
+		owner, repoName, err := parseSlug(repo.Slug)
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
 			continue
 		}
 
-		release, _, err := client.Repositories.GetLatestRelease(ctx, parts[0], parts[1])
+		release, _, err := client.Repositories.GetLatestRelease(ctx, owner, repoName)
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "Error fetching release for %s: %v\n", repo.Slug, err)
 			continue
@@ -89,4 +89,12 @@ func createGithubClient(ctx context.Context, config Config) *github.Client {
 		return github.NewClient(tc)
 	}
 	return github.NewClient(nil)
+}
+
+func parseSlug(slug string) (owner string, repo string, err error) {
+	parts := strings.SplitN(slug, "/", 2)
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid slug format: %s", slug)
+	}
+	return parts[0], parts[1], nil
 }
