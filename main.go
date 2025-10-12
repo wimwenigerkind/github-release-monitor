@@ -12,8 +12,8 @@ import (
 )
 
 type Config struct {
-	AccessToken string       `yaml:"access_token"`
-	Repositorys []Repository `yaml:"repositorys"`
+	AccessToken  string       `yaml:"access_token"`
+	Repositories []Repository `yaml:"repositories"`
 }
 
 type Repository struct {
@@ -22,17 +22,19 @@ type Repository struct {
 }
 
 func main() {
+	ctx := context.Background()
+
 	config, err := loadConfig("config.yml")
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
 		return
 	}
 
-	ctx := context.Background()
 	client := createGithubClient(ctx, *config)
 
-	for i := range config.Repositorys {
-		repo := &config.Repositorys[i]
+	for i := range config.Repositories {
+		repo := &config.Repositories[i]
+
 		owner, repoName, err := parseSlug(repo.Slug)
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
