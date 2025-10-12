@@ -87,24 +87,30 @@ func parseSlug(slug string) (owner string, repo string, err error) {
 func checkRepositories(ctx context.Context, config *Config, client *github.Client) error {
 	for i := range config.Repositories {
 		repo := &config.Repositories[i]
-
-		owner, repoName, err := parseSlug(repo.Slug)
+		err := checkRepository(ctx, repo, client)
 		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
-			continue
-		}
-
-		release, _, err := client.Repositories.GetLatestRelease(ctx, owner, repoName)
-		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Error fetching release for %s: %v\n", repo.Slug, err)
-			continue
-		}
-
-		tagName := release.GetTagName()
-		if repo.CurrentReleaseTag != tagName {
-			repo.CurrentReleaseTag = tagName
-			fmt.Printf("New release for %s: %s\n", repo.Slug, tagName)
+			_, _ = fmt.Fprintf(os.Stderr, "Error checking repository %s: %v\n", repo.Slug, err)
 		}
 	}
+	return nil
+}
+
+func checkRepository(ctx context.Context, repo *Repository, client *github.Client) error {
+	owner, repoName, err := parseSlug(repo.Slug)
+	if err != nil {
+		return err
+	}
+
+	release, _, err := client.Repositories.GetLatestRelease(ctx, owner, repoName)
+	if err != nil {
+		return fmt.Errorf("error fetching release for %s: %w", repo.Slug, err)
+	}
+
+	tagName := release.GetTagName()
+	if repo.CurrentReleaseTag != tagName {
+		repo.CurrentReleaseTag = tagName
+		fmt.Printf("New release for %s: %s\n", repo.Slug, tagName)
+	}
+
 	return nil
 }
