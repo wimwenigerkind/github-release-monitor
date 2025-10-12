@@ -29,16 +29,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	var client *github.Client
-	if config.AccessToken != "" {
-		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: config.AccessToken},
-		)
-		tc := oauth2.NewClient(ctx, ts)
-		client = github.NewClient(tc)
-	} else {
-		client = github.NewClient(nil)
-	}
+	client := createGithubClient(ctx, *config)
 
 	for i := range config.Repositorys {
 		repo := &config.Repositorys[i]
@@ -87,4 +78,15 @@ func saveConfig(filename string, config *Config) error {
 		return err
 	}
 	return os.WriteFile(filename, data, 0644)
+}
+
+func createGithubClient(ctx context.Context, config Config) *github.Client {
+	if config.AccessToken != "" {
+		ts := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: config.AccessToken},
+		)
+		tc := oauth2.NewClient(ctx, ts)
+		return github.NewClient(tc)
+	}
+	return github.NewClient(nil)
 }
