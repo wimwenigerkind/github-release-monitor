@@ -61,11 +61,7 @@ func main() {
 		}
 	}
 
-	marshal, err := yaml.Marshal(config)
-	if err != nil {
-		return
-	}
-	err = os.WriteFile("config.yml", marshal, 0644)
+	err = saveConfig("config.yml", config)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error writing config: %v\n", err)
 		return
@@ -83,4 +79,12 @@ func loadConfig(filename string) (*Config, error) {
 		return nil, err
 	}
 	return &config, nil
+}
+
+func saveConfig(filename string, config *Config) error {
+	data, err := yaml.Marshal(config)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filename, data, 0644)
 }
