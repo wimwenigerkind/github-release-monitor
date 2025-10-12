@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/go-github/github"
+	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -33,7 +34,15 @@ func main() {
 	}
 	ctx := context.Background()
 	var client *github.Client
-	client = github.NewClient(nil)
+	if config.AccessToken != "" {
+		ts := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: config.AccessToken},
+		)
+		tc := oauth2.NewClient(ctx, ts)
+		client = github.NewClient(tc)
+	} else {
+		client = github.NewClient(nil)
+	}
 
 	for i := range config.Repositorys {
 		repo := &config.Repositorys[i]
