@@ -6,19 +6,25 @@ import (
 	"os"
 	"strings"
 
+	"github.com/containrrr/shoutrrr"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	AccessToken  string       `yaml:"access_token"`
-	Repositories []Repository `yaml:"repositories"`
+	AccessToken   string         `yaml:"access_token"`
+	Repositories  []Repository   `yaml:"repositories"`
+	Notifications []Notification `yaml:"notifications"`
 }
 
 type Repository struct {
 	Slug              string `yaml:"slug"`
 	CurrentReleaseTag string `yaml:"current_release_tag"`
+}
+
+type Notification struct {
+	RawURL string `yaml:"url"`
 }
 
 func main() {
@@ -87,7 +93,7 @@ func parseSlug(slug string) (owner string, repo string, err error) {
 func checkRepositories(ctx context.Context, config *Config, client *github.Client) error {
 	for i := range config.Repositories {
 		repo := &config.Repositories[i]
-		err := checkRepository(ctx, repo, client)
+		err := checkRepository(ctx, repo, client, config.Notifications)
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "Error checking repository %s: %v\n", repo.Slug, err)
 		}
@@ -95,7 +101,7 @@ func checkRepositories(ctx context.Context, config *Config, client *github.Clien
 	return nil
 }
 
-func checkRepository(ctx context.Context, repo *Repository, client *github.Client) error {
+func checkRepository(ctx context.Context, repo *Repository, client *github.Client, notifications []Notification) error {
 	owner, repoName, err := parseSlug(repo.Slug)
 	if err != nil {
 		return err
@@ -106,7 +112,7 @@ func checkRepository(ctx context.Context, repo *Repository, client *github.Clien
 		return fmt.Errorf("error fetching release for %s: %w", repo.Slug, err)
 	}
 
-	updateReleaseTag(repo, tagName)
+	updateReleaseTag(repo, tagName, notifications)
 
 	return nil
 }
@@ -119,13 +125,21 @@ func getLatestReleaseTag(ctx context.Context, client *github.Client, owner, repo
 	return release.GetTagName(), nil
 }
 
-func updateReleaseTag(repo *Repository, tagName string) {
+func updateReleaseTag(repo *Repository, tagName string, notifications []Notification) {
 	if repo.CurrentReleaseTag != tagName {
 		repo.CurrentReleaseTag = tagName
-		notifyNewRelease(repo.Slug, tagName)
+		notifyNewRelease(repo.Slug, tagName, notifications)
 	}
 }
 
-func notifyNewRelease(slug, tagName string) {
-	fmt.Printf("New release for %s: %s\n", slug, tagName)
+func notifyNewRelease(slug, tagName string, notifications []Notification) {
+	message := fmt.Sprintf("New release for %s: %s", slug, tagName)
+	fmt.Println(message)
+
+	for _, notification := range notifications {
+		err := shoutrrr.Send(notification.RawURL, message)
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Error sending notification to %s: %v\n", notification.RawURL, err)
+		}
+	}
 }
