@@ -30,7 +30,9 @@ type Notification struct {
 func main() {
 	ctx := context.Background()
 
-	config, err := loadConfig("config.yml")
+	configFile := getConfigFile()
+
+	config, err := loadConfig(configFile)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
 		return
@@ -43,11 +45,15 @@ func main() {
 		_, _ = fmt.Fprintf(os.Stderr, "Error checking repositories: %v\n", err)
 	}
 
-	err = saveConfig("config.yml", config)
+	err = saveConfig(configFile, config)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error writing config: %v\n", err)
 		return
 	}
+}
+
+func getConfigFile() string {
+	return "config.yml"
 }
 
 func loadConfig(filename string) (*Config, error) {
