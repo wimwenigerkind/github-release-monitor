@@ -1,0 +1,11 @@
+---
+services:
+  monitor:
+    image: ghcr.io/wimwenigerkind/github-release-monitor:latest
+    container_name: github-release-monitor
+    restart: unless-stopped
+    volumes:
+      - ./config.yaml:/config.yaml
+    environment:
+      - GITHUB_RELEASE_MONITOR_CONFIG=/config.yaml
+      #- GITHUB_TOKEN=your_token_here # Optional: uncomment and set for higher rate limits
