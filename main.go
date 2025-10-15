@@ -137,9 +137,46 @@ func notifyNewRelease(slug, tagName string, notifications []Notification) {
 	fmt.Println(message)
 
 	for _, notification := range notifications {
-		err := shoutrrr.Send(notification.RawURL, message)
+		formattedMessage := formatNotificationMessage(notification.RawURL, slug, tagName, message)
+
+		err := shoutrrr.Send(notification.RawURL, formattedMessage)
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "Error sending notification to %s: %v\n", notification.RawURL, err)
 		}
 	}
+}
+
+func formatNotificationMessage(url, slug, tagName, defaultMessage string) string {
+	if strings.HasPrefix(url, "generic+powerautomate") {
+		return formatTeamsPowerAutomateMessage(slug, tagName)
+	}
+	return defaultMessage
+}
+
+func formatTeamsPowerAutomateMessage(slug, tagName string) string {
+	return fmt.Sprintf(`{
+		"type": "message",
+		"attachments": [{
+			"contentType": "application/vnd.microsoft.card.adaptive",
+			"content": {
+				"type": "AdaptiveCard",
+				"version": "1.2",
+				"body": [{
+					"type": "TextBlock",
+					"text": "New Release Available",
+					"weight": "bolder",
+					"size": "large"
+				},{
+					"type": "FactSet",
+					"facts": [{
+						"title": "Repository:",
+						"value": "%s"
+					},{
+						"title": "Version:",
+						"value": "%s"
+					}]
+				}]
+			}
+		}]
+	}`, slug, tagName)
 }
