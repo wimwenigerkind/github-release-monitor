@@ -53,6 +53,9 @@ func main() {
 }
 
 func getConfigFile() string {
+	if envConfig := os.Getenv("GITHUB_RELEASE_MONITOR_CONFIG"); envConfig != "" {
+		return envConfig
+	}
 	return "config.yml"
 }
 
