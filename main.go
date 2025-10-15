@@ -4,7 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"sync"
+	"syscall"
+	"time"
 
 	"github.com/containrrr/shoutrrr"
 	"github.com/google/go-github/github"
@@ -14,6 +18,7 @@ import (
 
 type Config struct {
 	AccessToken   string         `yaml:"access_token"`
+	Interval      int            `yaml:"interval"`
 	Repositories  []Repository   `yaml:"repositories"`
 	Notifications []Notification `yaml:"notifications"`
 }
@@ -28,7 +33,11 @@ type Notification struct {
 }
 
 func main() {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 	configFile := getConfigFile()
 
@@ -40,7 +49,40 @@ func main() {
 
 	client := createGithubClient(ctx, *config)
 
-	err = checkRepositories(ctx, config, client)
+	fmt.Println("Starting initial repository check...")
+	runCheck(ctx, config, client, configFile)
+
+	if config.Interval == 0 {
+		fmt.Println("Running in one-shot mode (no interval)")
+		return
+	}
+
+	interval := time.Duration(config.Interval) * time.Second
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	fmt.Printf("Running in daemon mode, checking every %v\n", interval)
+
+	for {
+		select {
+		case <-ticker.C:
+			runCheck(ctx, config, client, configFile)
+		case <-sigChan:
+			fmt.Println("\nReceived shutdown signal, saving config and exiting...")
+			if err := saveConfig(configFile, config); err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "Error saving config: %v\n", err)
+			}
+			return
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func runCheck(ctx context.Context, config *Config, client *github.Client, configFile string) {
+	fmt.Printf("[%s] Checking %d repositories...\n", time.Now().Format(time.RFC3339), len(config.Repositories))
+
+	err := checkRepositories(ctx, config, client)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error checking repositories: %v\n", err)
 	}
@@ -48,8 +90,9 @@ func main() {
 	err = saveConfig(configFile, config)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error writing config: %v\n", err)
-		return
 	}
+
+	fmt.Println("Check completed")
 }
 
 func getConfigFile() string {
@@ -100,13 +143,24 @@ func parseSlug(slug string) (owner string, repo string, err error) {
 }
 
 func checkRepositories(ctx context.Context, config *Config, client *github.Client) error {
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
 	for i := range config.Repositories {
-		repo := &config.Repositories[i]
-		err := checkRepository(ctx, repo, client, config.Notifications)
-		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Error checking repository %s: %v\n", repo.Slug, err)
-		}
+		wg.Add(1)
+		go func(repo *Repository) {
+			defer wg.Done()
+
+			err := checkRepository(ctx, repo, client, config.Notifications)
+			if err != nil {
+				mu.Lock()
+				_, _ = fmt.Fprintf(os.Stderr, "Error checking repository %s: %v\n", repo.Slug, err)
+				mu.Unlock()
+			}
+		}(&config.Repositories[i])
 	}
+
+	wg.Wait()
 	return nil
 }
 
