@@ -1,0 +1,3 @@
+interval: 900
+repositories:
+  - slug: wimwenigerkind/github-release-monitor
