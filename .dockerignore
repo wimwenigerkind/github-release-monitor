@@ -1,0 +1,10 @@
+.git
+.github
+.idea
+*.md
+.gitignore
+.goreleaser.yaml
+dist
+*.sum
+go.mod
+*.go
