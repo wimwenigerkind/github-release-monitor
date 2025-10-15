@@ -124,9 +124,19 @@ func saveConfig(filename string, config *Config) error {
 }
 
 func createGithubClient(ctx context.Context, config Config) *github.Client {
-	if config.AccessToken != "" {
+	accessToken := config.AccessToken
+	if accessToken == "" {
+		accessToken = os.Getenv("GITHUB_TOKEN")
+		if accessToken != "" {
+			fmt.Println("Using GitHub access token from environment variable")
+		}
+	}
+	if accessToken != "" {
+		if config.AccessToken != "" {
+			fmt.Println("Using provided GitHub access token for authentication")
+		}
 		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: config.AccessToken},
+			&oauth2.Token{AccessToken: accessToken},
 		)
 		tc := oauth2.NewClient(ctx, ts)
 		return github.NewClient(tc)
