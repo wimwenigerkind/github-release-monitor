@@ -17,7 +17,7 @@ import (
 )
 
 type Config struct {
-	AccessToken   string         `yaml:"access_token"`
+	AccessToken   string         `yaml:"access_token,omitempty"`
 	Interval      int            `yaml:"interval"`
 	Repositories  []Repository   `yaml:"repositories"`
 	Notifications []Notification `yaml:"notifications"`
