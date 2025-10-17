@@ -227,6 +227,8 @@ func formatNotificationMessage(url, slug, tagName, defaultMessage string) string
 }
 
 func formatTeamsPowerAutomateMessage(slug, tagName string) string {
+	repoURL := fmt.Sprintf("https://github.com/%s", slug)
+	releaseURL := fmt.Sprintf("https://github.com/%s/releases/tag/%s", slug, tagName)
 	return fmt.Sprintf(`{
 		"type": "message",
 		"attachments": [{
@@ -243,13 +245,13 @@ func formatTeamsPowerAutomateMessage(slug, tagName string) string {
 					"type": "FactSet",
 					"facts": [{
 						"title": "Repository:",
-						"value": "%s"
+						"value": "[%s](%s)"
 					},{
 						"title": "Version:",
-						"value": "%s"
+						"value": "[%s](%s)"
 					}]
 				}]
 			}
 		}]
-	}`, slug, tagName)
+	}`, slug, repoURL, tagName, releaseURL)
 }
