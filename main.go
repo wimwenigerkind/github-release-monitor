@@ -229,29 +229,60 @@ func formatNotificationMessage(url, slug, tagName, defaultMessage string) string
 func formatTeamsPowerAutomateMessage(slug, tagName string) string {
 	repoURL := fmt.Sprintf("https://github.com/%s", slug)
 	releaseURL := fmt.Sprintf("https://github.com/%s/releases/tag/%s", slug, tagName)
+	owner, _, _ := parseSlug(slug)
+	imageURL := fmt.Sprintf("https://github.com/%s.png", owner)
 	return fmt.Sprintf(`{
-		"type": "message",
-		"attachments": [{
-			"contentType": "application/vnd.microsoft.card.adaptive",
-			"content": {
-				"type": "AdaptiveCard",
-				"version": "1.2",
-				"body": [{
-					"type": "TextBlock",
-					"text": "New Release Available",
-					"weight": "bolder",
-					"size": "large"
-				},{
-					"type": "FactSet",
-					"facts": [{
-						"title": "Repository:",
-						"value": "[%s](%s)"
-					},{
-						"title": "Version:",
-						"value": "[%s](%s)"
-					}]
-				}]
-			}
-		}]
-	}`, slug, repoURL, tagName, releaseURL)
+    "type": "message",
+    "attachments": [{
+        "contentType": "application/vnd.microsoft.card.adaptive",
+        "content": {
+            "type": "AdaptiveCard",
+            "$schema": "https://adaptivecards.io/schemas/adaptive-card.json",
+            "version": "1.5",
+            "body": [
+                {
+                    "type": "ColumnSet",
+                    "columns": [
+                        {
+                            "type": "Column",
+                            "width": "auto",
+                            "items": [
+                                {
+                                    "type": "Image",
+                                    "url": "%s",
+                                    "size": "Large"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Column",
+                            "width": "stretch",
+                            "items": [
+                                {
+                                    "type": "TextBlock",
+                                    "text": "New Release Available",
+                                    "weight": "Bolder",
+                                    "size": "Large"
+                                },
+                                {
+                                    "type": "FactSet",
+                                    "facts": [
+                                        {
+                                            "title": "Repository:",
+                                            "value": "[%s](%s)"
+                                        },
+                                        {
+                                            "title": "Version:",
+                                            "value": "[%s](%s)"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }]
+}`, imageURL, slug, repoURL, tagName, releaseURL)
 }
